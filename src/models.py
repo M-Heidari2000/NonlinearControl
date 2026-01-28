@@ -119,14 +119,9 @@ class Encoder(nn.Module):
         self.rnn_input_dim = rnn_input_dim
         self._min_std = min_std
 
-    def forward(
-        self,
-        rnn_hidden: torch.Tensor,
-        u: torch.Tensor,
-        y: torch.Tensor,
-    ):
+    def step(self, rnn_hidden: torch.Tensor, u: torch.Tensor, y: torch.Tensor):
         """
-            Single step update of the rnn hidden
+            single step update of the rnn hidden and the posterior
             inputs:
                 h: h_{t-1}
                 u: u_{t-1}
@@ -141,6 +136,32 @@ class Encoder(nn.Module):
         rnn_hidden = self.rnn(rnn_input, rnn_hidden)
         mean = self.posterior_mean_head(rnn_hidden)
         cov = torch.diag_embed(self.posterior_std_head(rnn_hidden) + self._min_std)
-        dist = MultivariateNormal(loc=mean, covariance_matrix=cov)
+        posterior = MultivariateNormal(loc=mean, covariance_matrix=cov)
 
-        return dist, rnn_hidden
+        return posterior, rnn_hidden
+    
+    def forward(self, rnn_hidden: torch.Tensor, us: torch.Tensor, ys: torch.Tensor):
+        """
+            multi step inference of rnn hiddens and posteriors
+
+            inputs:
+                rnn_hidden: initial rnn hidden
+                ys: y1:T
+                us: u0:T-1
+            outputs:
+                hiddens: h1:T
+                posteriors
+        """
+
+        T, _, _ = ys.shape
+        posteriors = []
+        rnn_hiddens = []
+
+        for t in range(1, T):
+            dist, rnn_hidden = self.step(rnn_hidden=rnn_hidden, u=us[t-1], y=ys[t])
+            posteriors.append(dist)
+            rnn_hiddens.append(rnn_hidden)
+
+        rnn_hiddens = torch.stack(rnn_hiddens, dim=0)
+
+        return posteriors, rnn_hiddens
