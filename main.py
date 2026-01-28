@@ -18,7 +18,7 @@ from dfine.train import train_backbone
 
 
 if __name__ == "__main__":
-    parser = argparse.ArgumentParser(description="DFINE")
+    parser = argparse.ArgumentParser(description="Nonlinear Control")
     parser.add_argument("--config", type=str, help="path to the config file")
     args = parser.parse_args()
     
