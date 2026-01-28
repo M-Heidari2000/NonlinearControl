@@ -157,7 +157,7 @@ class Encoder(nn.Module):
         posteriors = []
         rnn_hiddens = []
 
-        for t in range(1, T):
+        for t in range(T):
             dist, rnn_hidden = self.step(rnn_hidden=rnn_hidden, u=us[t-1], y=ys[t])
             posteriors.append(dist)
             rnn_hiddens.append(rnn_hidden)

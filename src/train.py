@@ -82,7 +82,7 @@ def train_backbone(
         rnn_hidden = torch.zeros((config.batch_size, config.rnn_hidden_dim), device=device)
         posteriors, _ = encoder(rnn_hidden=rnn_hidden, ys=y[1:], us=u[:-1])
         # x1:T
-        posterior_samples = torch.stack([p.rsample() for p in posteriors], dim=1)
+        posterior_samples = torch.stack([p.rsample() for p in posteriors], dim=0)
         # reconstruction loss
         y_recon = decoder(einops.rearrange(posterior_samples, "l b x -> (l b) x"))
         y_true = einops.rearrange(y[1:], "l b y -> (l b) y")
@@ -131,10 +131,10 @@ def train_backbone(
                 rnn_hidden = torch.zeros((config.batch_size, config.rnn_hidden_dim), device=device)
                 posteriors, _ = encoder(rnn_hidden=rnn_hidden, ys=y[1:], us=u[:-1])
                 # x1:T
-                posterior_samples = torch.stack([p.rsample() for p in posteriors], dim=1)
+                posterior_samples = torch.stack([p.rsample() for p in posteriors], dim=0)
                 # reconstruction loss
-                y_recon = decoder(einops.rearrange(posterior_samples, "T B x -> (TB) x"))
-                y_true = einops.rearrange(y[1:], "T B y -> (TB) y")
+                y_recon = decoder(einops.rearrange(posterior_samples, "l b x -> (l b) x"))
+                y_true = einops.rearrange(y[1:], "l b y -> (l b) y")
                 reconstruction_loss = nn.MSELoss()(y_recon, y_true)
                 # KL loss
                 kl_loss = 0.0
