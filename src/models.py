@@ -146,19 +146,26 @@ class Encoder(nn.Module):
 
             inputs:
                 rnn_hidden: initial rnn hidden
-                ys: y1:T
+                ys: y0:T
                 us: u0:T-1
             outputs:
-                hiddens: h1:T
-                posteriors
+                hiddens: h0:T
+                posteriors: {q(x_t|y1:t, u0:t-1)} for t=0:T
         """
 
-        T, _, _ = ys.shape
-        posteriors = []
-        rnn_hiddens = []
+        T, B, _ = us.shape
+        device = ys.device
+
+        posteriors = [
+            MultivariateNormal(
+                loc=torch.zeros((B, self.x_dim), device=device),
+                covariance_matrix=torch.eye(self.x_dim, device=device).repeat([B, 1, 1]),
+            )
+        ]
+        rnn_hiddens = [rnn_hidden]
 
         for t in range(T):
-            dist, rnn_hidden = self.step(rnn_hidden=rnn_hidden, u=us[t-1], y=ys[t])
+            dist, rnn_hidden = self.step(rnn_hidden=rnn_hidden, u=us[t], y=ys[t+1])
             posteriors.append(dist)
             rnn_hiddens.append(rnn_hidden)
 

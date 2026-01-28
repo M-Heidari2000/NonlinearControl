@@ -74,25 +74,28 @@ def train_backbone(
 
         # convert to tensor, transform to device, reshape to time-first
         y = torch.as_tensor(y, device=device)
-        y = einops.rearrange(y, "b l y -> l b y")
+        y = torch.stack((
+            torch.zeros((1, config.batch_size, train_buffer.y_dim), device=device),
+            einops.rearrange(y, "b l y -> l b y")
+        ), dim=0)
         u = torch.as_tensor(u, device=device)
         u = einops.rearrange(u, "b l u -> l b u")
 
         # Initial RNN hidden
         rnn_hidden = torch.zeros((config.batch_size, config.rnn_hidden_dim), device=device)
-        posteriors, _ = encoder(rnn_hidden=rnn_hidden, ys=y[1:], us=u[:-1])
-        # x1:T
+        posteriors, _ = encoder(rnn_hidden=rnn_hidden, ys=y, us=u)
+        # x0:T
         posterior_samples = torch.stack([p.rsample() for p in posteriors], dim=0)
         # reconstruction loss
-        y_recon = decoder(einops.rearrange(posterior_samples, "l b x -> (l b) x"))
+        y_recon = decoder(einops.rearrange(posterior_samples[1:], "l b x -> (l b) x"))
         y_true = einops.rearrange(y[1:], "l b y -> (l b) y")
         reconstruction_loss = nn.MSELoss()(y_recon, y_true)
         # KL loss
         kl_loss = 0.0
-        for t in range(config.chunk_length-2):
-            prior = dynamics_model(x=posterior_samples[t], u=u[t])
+        for t in range(config.chunk_length):
+            prior = dynamics_model(x=posterior_samples[t], u=u[t])  # prior at time t+1
             kl_loss += kl_divergence(posteriors[t+1], prior).clamp(min=config.free_nats).mean()
-        kl_loss = kl_loss / (config.chunk_length - 2)
+        kl_loss = kl_loss / config.chunk_length
 
         total_loss = reconstruction_loss + config.kl_beta * kl_loss
 
@@ -112,7 +115,6 @@ def train_backbone(
         if update % config.test_interval == 0:
             # test
             with torch.no_grad():              
-                # train
                 encoder.eval()
                 decoder.eval()
                 dynamics_model.eval()
@@ -124,25 +126,28 @@ def train_backbone(
 
                 # convert to tensor, transform to device, reshape to time-first
                 y = torch.as_tensor(y, device=device)
-                y = einops.rearrange(y, "b l y -> l b y")
+                y = torch.stack((
+                    torch.zeros((1, config.batch_size, test_buffer.y_dim), device=device),
+                    einops.rearrange(y, "b l y -> l b y")
+                ), dim=0)
                 u = torch.as_tensor(u, device=device)
                 u = einops.rearrange(u, "b l u -> l b u")
 
                 # Initial RNN hidden
                 rnn_hidden = torch.zeros((config.batch_size, config.rnn_hidden_dim), device=device)
-                posteriors, _ = encoder(rnn_hidden=rnn_hidden, ys=y[1:], us=u[:-1])
-                # x1:T
+                posteriors, _ = encoder(rnn_hidden=rnn_hidden, ys=y, us=u)
+                # x0:T
                 posterior_samples = torch.stack([p.rsample() for p in posteriors], dim=0)
                 # reconstruction loss
-                y_recon = decoder(einops.rearrange(posterior_samples, "l b x -> (l b) x"))
+                y_recon = decoder(einops.rearrange(posterior_samples[1:], "l b x -> (l b) x"))
                 y_true = einops.rearrange(y[1:], "l b y -> (l b) y")
                 reconstruction_loss = nn.MSELoss()(y_recon, y_true)
                 # KL loss
                 kl_loss = 0.0
-                for t in range(config.chunk_length-2):
-                    prior = dynamics_model(x=posterior_samples[t], u=u[t])
+                for t in range(config.chunk_length):
+                    prior = dynamics_model(x=posterior_samples[t], u=u[t])  # prior at time t+1
                     kl_loss += kl_divergence(posteriors[t+1], prior).clamp(min=config.free_nats).mean()
-                kl_loss = kl_loss / (config.chunk_length - 2)
+                kl_loss = kl_loss / config.chunk_length
 
                 total_loss = reconstruction_loss + config.kl_beta * kl_loss
 
