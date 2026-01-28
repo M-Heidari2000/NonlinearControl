@@ -80,7 +80,7 @@ def train_backbone(
 
         # Initial RNN hidden
         rnn_hidden = torch.zeros((config.batch_size, config.rnn_hidden_dim), device=device)
-        posteriors, _ = dynamics_model(rnn_hidden=rnn_hidden, ys=y[1:], us=u[:-1])
+        posteriors, _ = encoder(rnn_hidden=rnn_hidden, ys=y[1:], us=u[:-1])
         # x1:T
         posterior_samples = torch.stack([p.rsample() for p in posteriors], dim=1)
         # reconstruction loss
@@ -129,7 +129,7 @@ def train_backbone(
 
                 # Initial RNN hidden
                 rnn_hidden = torch.zeros((config.batch_size, config.rnn_hidden_dim), device=device)
-                posteriors, _ = dynamics_model(rnn_hidden=rnn_hidden, ys=y[1:], us=u[:-1])
+                posteriors, _ = encoder(rnn_hidden=rnn_hidden, ys=y[1:], us=u[:-1])
                 # x1:T
                 posterior_samples = torch.stack([p.rsample() for p in posteriors], dim=1)
                 # reconstruction loss
