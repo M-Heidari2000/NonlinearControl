@@ -85,7 +85,7 @@ def train_backbone(
         rnn_hidden = torch.zeros((config.batch_size, config.rnn_hidden_dim), device=device)
         posteriors, _ = encoder(rnn_hidden=rnn_hidden, ys=y, us=u)
         # x0:T
-        posterior_samples = torch.cat([p.rsample() for p in posteriors], dim=0)
+        posterior_samples = torch.stack([p.rsample() for p in posteriors], dim=0)
         # reconstruction loss
         y_recon = decoder(einops.rearrange(posterior_samples[1:], "l b x -> (l b) x"))
         y_true = einops.rearrange(y[1:], "l b y -> (l b) y")
@@ -137,7 +137,7 @@ def train_backbone(
                 rnn_hidden = torch.zeros((config.batch_size, config.rnn_hidden_dim), device=device)
                 posteriors, _ = encoder(rnn_hidden=rnn_hidden, ys=y, us=u)
                 # x0:T
-                posterior_samples = torch.cat([p.rsample() for p in posteriors], dim=0)
+                posterior_samples = torch.stack([p.rsample() for p in posteriors], dim=0)
                 # reconstruction loss
                 y_recon = decoder(einops.rearrange(posterior_samples[1:], "l b x -> (l b) x"))
                 y_true = einops.rearrange(y[1:], "l b y -> (l b) y")
