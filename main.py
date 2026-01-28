@@ -12,9 +12,9 @@ from datetime import datetime
 from omegaconf import OmegaConf
 from minari import MinariDataset
 from sklearn.preprocessing import StandardScaler
-from dfine.memory import ReplayBuffer
+from src.memory import ReplayBuffer
 from envs.utils import collect_data
-from dfine.train import train_backbone
+from src.train import train_backbone
 
 
 if __name__ == "__main__":
