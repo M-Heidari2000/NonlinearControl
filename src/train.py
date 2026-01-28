@@ -29,7 +29,7 @@ def train_backbone(
         x_dim=config.x_dim,
         rnn_hidden_dim=config.rnn_hidden_dim,
         rnn_input_dim=config.rnn_input_dim,
-        min_std=config.min_std
+        min_var=config.min_var
     ).to(device)
 
     decoder = Decoder(
@@ -42,7 +42,7 @@ def train_backbone(
         x_dim=config.x_dim,
         u_dim=train_buffer.u_dim,
         hidden_dim=config.hidden_dim,
-        min_std=config.min_std,
+        min_var=config.min_var,
     ).to(device)
 
     wandb.watch([encoder, dynamics_model, decoder], log="all", log_freq=10)

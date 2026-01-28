@@ -49,7 +49,7 @@ class Dynamics(nn.Module):
         x_dim: int,
         u_dim: int,
         hidden_dim: Optional[int]=None,
-        min_std: float=1e-2,
+        min_var: float=1e-2,
     ):
         super().__init__()
 
@@ -70,12 +70,12 @@ class Dynamics(nn.Module):
             nn.Softplus(),
         )
 
-        self._min_std = min_std
+        self._min_var = min_var
 
     def forward(self, x: torch.Tensor, u: torch.Tensor):
         hidden = self.mlp_layers(torch.cat([x, u], dim=1))
         mean = self.mean_head(hidden)
-        cov = torch.diag_embed(self.std_head(hidden) + self._min_std)
+        cov = torch.diag_embed(self.std_head(hidden) + self._min_var)
         dist = MultivariateNormal(loc=mean, covariance_matrix=cov)
         return dist
     
@@ -92,7 +92,7 @@ class Encoder(nn.Module):
         x_dim: int,
         rnn_hidden_dim: Optional[int]=128,
         rnn_input_dim: Optional[int]=128,
-        min_std: float=1e-2,
+        min_var: float=1e-2,
     ):
         super().__init__()
 
@@ -117,7 +117,7 @@ class Encoder(nn.Module):
         self.x_dim = x_dim
         self.u_dim = u_dim
         self.rnn_input_dim = rnn_input_dim
-        self._min_std = min_std
+        self._min_var = min_var
 
     def step(self, rnn_hidden: torch.Tensor, u: torch.Tensor, y: torch.Tensor):
         """
@@ -135,7 +135,7 @@ class Encoder(nn.Module):
         rnn_input = self.fc_yu(torch.cat((y, u), dim=1))
         rnn_hidden = self.rnn(rnn_input, rnn_hidden)
         mean = self.posterior_mean_head(rnn_hidden)
-        cov = torch.diag_embed(self.posterior_std_head(rnn_hidden) + self._min_std)
+        cov = torch.diag_embed(self.posterior_std_head(rnn_hidden) + self._min_var)
         posterior = MultivariateNormal(loc=mean, covariance_matrix=cov)
 
         return posterior, rnn_hidden
