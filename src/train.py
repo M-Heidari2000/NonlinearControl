@@ -142,6 +142,7 @@ def train_backbone(
                 for t in range(config.chunk_length-2):
                     prior = dynamics_model(x=posterior_samples[t], u=u[t])
                     kl_loss += kl_divergence(posteriors[t+1], prior).clamp(min=config.free_nats).mean()
+                kl_loss = kl_loss / (config.chunk_length - 2)
 
                 total_loss = reconstruction_loss + config.kl_beta * kl_loss
 
