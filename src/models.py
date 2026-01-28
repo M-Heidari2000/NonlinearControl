@@ -65,7 +65,7 @@ class Dynamics(nn.Module):
         )
 
         self.mean_head = nn.Linear(hidden_dim, x_dim)
-        self.std_head = nn.Sequential(
+        self.var_head = nn.Sequential(
             nn.Linear(hidden_dim, x_dim),
             nn.Softplus(),
         )
@@ -75,7 +75,7 @@ class Dynamics(nn.Module):
     def forward(self, x: torch.Tensor, u: torch.Tensor):
         hidden = self.mlp_layers(torch.cat([x, u], dim=1))
         mean = self.mean_head(hidden)
-        cov = torch.diag_embed(self.std_head(hidden) + self._min_var)
+        cov = torch.diag_embed(self.var_head(hidden) + self._min_var)
         dist = MultivariateNormal(loc=mean, covariance_matrix=cov)
         return dist
     
@@ -108,7 +108,7 @@ class Encoder(nn.Module):
         )
 
         self.posterior_mean_head = nn.Linear(rnn_hidden_dim, x_dim)
-        self.posterior_std_head = nn.Sequential(
+        self.posterior_var_head = nn.Sequential(
             nn.Linear(rnn_hidden_dim, x_dim),
             nn.Softplus(),
         )
@@ -135,7 +135,7 @@ class Encoder(nn.Module):
         rnn_input = self.fc_yu(torch.cat((y, u), dim=1))
         rnn_hidden = self.rnn(rnn_input, rnn_hidden)
         mean = self.posterior_mean_head(rnn_hidden)
-        cov = torch.diag_embed(self.posterior_std_head(rnn_hidden) + self._min_var)
+        cov = torch.diag_embed(self.posterior_var_head(rnn_hidden) + self._min_var)
         posterior = MultivariateNormal(loc=mean, covariance_matrix=cov)
 
         return posterior, rnn_hidden
