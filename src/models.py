@@ -72,12 +72,39 @@ class Dynamics(nn.Module):
 
         self._min_var = min_var
 
-    def forward(self, x: torch.Tensor, u: torch.Tensor):
+
+    def step(self, x: torch.Tensor, u: torch.Tensor):
         hidden = self.mlp_layers(torch.cat([x, u], dim=1))
         mean = self.mean_head(hidden)
         cov = torch.diag_embed(self.var_head(hidden) + self._min_var)
         dist = MultivariateNormal(loc=mean, covariance_matrix=cov)
         return dist
+
+    def forward(self, x: torch.Tensor, u: torch.Tensor):
+        """
+            rollout dynamics for multiple/single steps
+            input:
+                x: [B, x] initial state sampled from x_{t-d}
+                u: [T, B, u] multiple inputs u_{t-d:t-1}
+            output:
+                p(x_t | x_{t-d}, u_{t-d:t-1})
+        """
+
+        dists = []
+        samples = []
+
+        if u.dim() == 2:
+            u = u.unsqueeze(0)            
+
+        d, B, _ = u.shape
+        state = x
+        for l in range(d):
+            dist = self.step(x=state, u=u[l])
+            state = dist.rsample()
+            dists.append(dist)
+            samples.append(state)
+
+        return dists, samples
     
 
 class Encoder(nn.Module):

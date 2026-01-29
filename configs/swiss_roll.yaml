@@ -46,6 +46,7 @@ train:
     disable_gpu: True
     kl_beta: 1.0
     free_nats: 3.0
+    kl_overshoot: 4
 
 evaluation:
   num_points: 1

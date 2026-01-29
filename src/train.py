@@ -92,10 +92,11 @@ def train_backbone(
         reconstruction_loss = nn.MSELoss()(y_recon, y_true)
         # KL loss
         kl_loss = 0.0
-        for t in range(config.chunk_length):
-            prior = dynamics_model(x=posterior_samples[t], u=u[t])  # prior at time t+1
-            kl_loss += kl_divergence(posteriors[t+1], prior).clamp(min=config.free_nats).mean()
-        kl_loss = kl_loss / config.chunk_length
+        for t in range(config.chunk_length - config.kl_overshoot):
+            priors, _ = dynamics_model(x=posterior_samples[t], u=u[t:t+config.kl_overshoot])  # priors at time t+1:t+d
+            for d in range(config.kl_overshoot):
+                kl_loss += kl_divergence(posteriors[t+d+1], priors[d]).clamp(min=config.free_nats).mean()
+        kl_loss = kl_loss / ((config.chunk_length - config.kl_overshoot) * config.kl_overshoot)
 
         total_loss = reconstruction_loss + config.kl_beta * kl_loss
 
@@ -144,10 +145,11 @@ def train_backbone(
                 reconstruction_loss = nn.MSELoss()(y_recon, y_true)
                 # KL loss
                 kl_loss = 0.0
-                for t in range(config.chunk_length):
-                    prior = dynamics_model(x=posterior_samples[t], u=u[t])  # prior at time t+1
-                    kl_loss += kl_divergence(posteriors[t+1], prior).clamp(min=config.free_nats).mean()
-                kl_loss = kl_loss / config.chunk_length
+                for t in range(config.chunk_length - config.kl_overshoot):
+                    priors, _ = dynamics_model(x=posterior_samples[t], u=u[t:t+config.kl_overshoot])  # priors at time t+1:t+d
+                    for d in range(config.kl_overshoot):
+                        kl_loss += kl_divergence(posteriors[t+d+1], priors[d]).clamp(min=config.free_nats).mean()
+                kl_loss = kl_loss / ((config.chunk_length - config.kl_overshoot) * config.kl_overshoot)
 
                 total_loss = reconstruction_loss + config.kl_beta * kl_loss
 
