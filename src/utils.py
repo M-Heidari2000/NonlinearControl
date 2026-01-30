@@ -8,5 +8,5 @@ def detach_mvn(dist: MultivariateNormal):
 
     return MultivariateNormal(
         loc=dist.loc.detach(),
-        scale_tril=dist.scale_tril.detach(),
+        covariance_matrix=dist.covariance_matrix.detach(),
     )

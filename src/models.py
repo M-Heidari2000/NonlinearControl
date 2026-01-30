@@ -27,15 +27,6 @@ class Decoder(nn.Module):
             nn.Linear(hidden_dim, y_dim),
         )
 
-        self._init_weights()
-
-    def _init_weights(self):
-        for m in self.modules():
-            if isinstance(m, nn.Linear):
-                init.orthogonal_(m.weight, gain=nn.init.calculate_gain("relu"))
-                if m.bias is not None:
-                    init.zeros_(m.bias)
-
     def forward(self, state):
         return self.mlp_layers(state)
     
@@ -75,10 +66,31 @@ class Dynamics(nn.Module):
 
     def step(self, x: torch.Tensor, u: torch.Tensor):
         hidden = self.mlp_layers(torch.cat([x, u], dim=1))
-        mean = self.mean_head(hidden)
+        mean = x + self.mean_head(hidden)
         cov = torch.diag_embed(self.var_head(hidden) + self._min_var)
         dist = MultivariateNormal(loc=mean, covariance_matrix=cov)
         return dist
+    
+    def generate(self, x: torch.Tensor, u:torch.Tensor):
+        """
+            generates trajectory given initial state and a list of actions
+            uses mean decoding
+        """
+        with torch.no_grad():
+            samples = []
+
+            if u.dim() == 2:
+                u = u.unsqueeze(0)            
+
+            d, _, _ = u.shape
+            state = x
+
+            for l in range(d):
+                dist = self.step(x=state, u=u[l])
+                state = dist.loc
+                samples.append(state)
+
+        return samples
 
     def forward(self, x: torch.Tensor, u: torch.Tensor):
         """
@@ -96,7 +108,7 @@ class Dynamics(nn.Module):
         if u.dim() == 2:
             u = u.unsqueeze(0)            
 
-        d, B, _ = u.shape
+        d, _, _ = u.shape
         state = x
         for l in range(d):
             dist = self.step(x=state, u=u[l])
