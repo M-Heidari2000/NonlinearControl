@@ -21,9 +21,9 @@ class Decoder(nn.Module):
         
         self.mlp_layers = nn.Sequential(
             nn.Linear(x_dim, hidden_dim),
-            nn.ReLU(),
+            nn.ELU(),
             nn.Linear(hidden_dim, hidden_dim),
-            nn.ReLU(),
+            nn.ELU(),
             nn.Linear(hidden_dim, y_dim),
         )
 
@@ -59,9 +59,9 @@ class Dynamics(nn.Module):
 
         self.mlp_layers = nn.Sequential(
             nn.Linear(x_dim + u_dim, hidden_dim),
-            nn.ReLU(),
+            nn.ELU(),
             nn.Linear(hidden_dim, hidden_dim),
-            nn.ReLU(),
+            nn.ELU(),
         )
 
         self.mean_head = nn.Linear(hidden_dim, x_dim)
@@ -131,7 +131,7 @@ class Encoder(nn.Module):
 
         self.fc_yu = nn.Sequential(
             nn.Linear(y_dim + u_dim, rnn_input_dim),
-            nn.ReLU(),
+            nn.ELU(),
         )
 
         self.posterior_mean_head = nn.Linear(rnn_hidden_dim, x_dim)
