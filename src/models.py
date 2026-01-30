@@ -80,7 +80,7 @@ class Dynamics(nn.Module):
         dist = MultivariateNormal(loc=mean, covariance_matrix=cov)
         return dist
 
-    def forward(self, x: torch.Tensor, u: torch.Tensor, sample: bool=True):
+    def forward(self, x: torch.Tensor, u: torch.Tensor):
         """
             rollout dynamics for multiple/single steps
             input:
@@ -100,7 +100,7 @@ class Dynamics(nn.Module):
         state = x
         for l in range(d):
             dist = self.step(x=state, u=u[l])
-            state = dist.rsample() if sample else dist.loc
+            state = dist.rsample()
             dists.append(dist)
             samples.append(state)
 
