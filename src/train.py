@@ -6,6 +6,7 @@ from tqdm import tqdm
 from omegaconf.dictconfig import DictConfig
 from torch.distributions.kl import kl_divergence
 from .memory import ReplayBuffer
+from .utils import detach_mvn
 from torch.nn.utils import clip_grad_norm_
 from .models import (
     Encoder,
@@ -95,7 +96,10 @@ def train_backbone(
         for t in range(config.chunk_length - config.kl_overshoot):
             priors, _ = dynamics_model(x=posterior_samples[t], u=u[t:t+config.kl_overshoot])  # priors at time t+1:t+d
             for d in range(config.kl_overshoot):
-                kl_loss += kl_divergence(posteriors[t+d+1], priors[d]).clamp(min=config.free_nats).mean()
+                if d > 0:
+                    kl_loss += kl_divergence(detach_mvn(posteriors[t+d+1]), priors[d]).clamp(min=config.free_nats).mean()
+                else:
+                    kl_loss += kl_divergence(posteriors[t+d+1], priors[d]).clamp(min=config.free_nats).mean()
         kl_loss = kl_loss / ((config.chunk_length - config.kl_overshoot) * config.kl_overshoot)
 
         total_loss = reconstruction_loss + config.kl_beta * kl_loss
@@ -148,7 +152,10 @@ def train_backbone(
                 for t in range(config.chunk_length - config.kl_overshoot):
                     priors, _ = dynamics_model(x=posterior_samples[t], u=u[t:t+config.kl_overshoot])  # priors at time t+1:t+d
                     for d in range(config.kl_overshoot):
-                        kl_loss += kl_divergence(posteriors[t+d+1], priors[d]).clamp(min=config.free_nats).mean()
+                        if d > 0:
+                            kl_loss += kl_divergence(detach_mvn(posteriors[t+d+1]), priors[d]).clamp(min=config.free_nats).mean()
+                        else:
+                            kl_loss += kl_divergence(posteriors[t+d+1], priors[d]).clamp(min=config.free_nats).mean()
                 kl_loss = kl_loss / ((config.chunk_length - config.kl_overshoot) * config.kl_overshoot)
 
                 total_loss = reconstruction_loss + config.kl_beta * kl_loss
