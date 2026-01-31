@@ -1,7 +1,7 @@
 import torch
 import numpy as np
 import gymnasium as gym
-from .agents import IMPCAgent, OracleMPC
+from .agents import CEMAgent, OracleMPC
 from omegaconf.dictconfig import DictConfig
 from .models import Dynamics, Encoder
 from .utils import make_grid
@@ -11,7 +11,7 @@ from .train import train_cost
 
 def trial(
     env: gym.Env,
-    agent: IMPCAgent,
+    agent: CEMAgent,
     oracle: OracleMPC,
     target: np.ndarray,
 ):
@@ -83,16 +83,18 @@ def evaluate(
             cost_model = train_cost(
                 config=cost_train_config,
                 encoder=encoder,
-                dynamics_model=dynamics_model,
                 train_buffer=train_buffer,
                 test_buffer=test_buffer,
             )
             # create agent
-            agent = IMPCAgent(
+            agent = CEMAgent(
                 encoder=encoder,
                 dynamics_model=dynamics_model,
                 cost_model=cost_model,
                 planning_horizon=eval_config.planning_horizon,
+                num_iteractions=eval_config.num_iterations,
+                num_candidates=eval_config.num_candidates,
+                num_elites=eval_config.num_elites,
             )
 
             # create oracle
