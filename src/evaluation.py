@@ -92,7 +92,7 @@ def evaluate(
                 dynamics_model=dynamics_model,
                 cost_model=cost_model,
                 planning_horizon=eval_config.planning_horizon,
-                num_iteractions=eval_config.num_iterations,
+                num_iterations=eval_config.num_iterations,
                 num_candidates=eval_config.num_candidates,
                 num_elites=eval_config.num_elites,
             )
