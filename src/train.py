@@ -181,7 +181,6 @@ def train_cost(
     cost_model = CostModel(
         x_dim=encoder.x_dim,
         u_dim=encoder.u_dim,
-        input_penalty=config.input_penalty,
     ).to(device)
 
     # freeze the encoder
@@ -216,6 +215,11 @@ def train_cost(
         ), dim=0)
         u = torch.as_tensor(u, device=device)
         u = einops.rearrange(u, "b l u -> l b u")
+        c = torch.as_tensor(c, device=device)
+        c = torch.cat((
+            torch.zeros((1, config.batch_size, 1), device=device),
+            einops.rearrange(c, "b l c -> l b c")
+        ), dim=0)
 
         # Initial RNN hidden
         rnn_hidden = torch.zeros((config.batch_size, config.rnn_hidden_dim), device=device)
@@ -224,8 +228,8 @@ def train_cost(
         posterior_samples = torch.stack([p.rsample() for p in posteriors], dim=0)
         # compute cost loss
         cost_loss = 0.0
-        for t in range(config.chunk_length):
-            cost_loss += nn.MSELoss()(cost_model(x=posterior_samples[t], u=u[t]), c[t])
+        for t in range(1, config.chunk_length+1):
+            cost_loss += nn.MSELoss()(cost_model(x=posterior_samples[t]), c[t])
         cost_loss = cost_loss / config.chunk_length
 
         optimizer.zero_grad()
@@ -258,6 +262,11 @@ def train_cost(
                 ), dim=0)
                 u = torch.as_tensor(u, device=device)
                 u = einops.rearrange(u, "b l u -> l b u")
+                c = torch.as_tensor(c, device=device)
+                c = torch.cat((
+                    torch.zeros((1, config.batch_size, 1), device=device),
+                    einops.rearrange(c, "b l c -> l b c")
+                ), dim=0)
 
                 # Initial RNN hidden
                 rnn_hidden = torch.zeros((config.batch_size, config.rnn_hidden_dim), device=device)
@@ -266,8 +275,8 @@ def train_cost(
                 posterior_samples = torch.stack([p.rsample() for p in posteriors], dim=0)
                 # compute cost loss
                 cost_loss = 0.0
-                for t in range(config.chunk_length):
-                    cost_loss += nn.MSELoss()(cost_model(x=posterior_samples[t], u=u[t]), c[t])
+                for t in range(1, config.chunk_length+1):
+                    cost_loss += nn.MSELoss()(cost_model(x=posterior_samples[t]), c[t])
                 cost_loss = cost_loss / config.chunk_length
 
                 wandb.log({

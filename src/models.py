@@ -220,7 +220,6 @@ class CostModel(nn.Module):
         x_dim: int,
         u_dim: int,
         hidden_dim: Optional[int]=64,
-        input_penalty: Optional[float]=1.0,
     ):
         super().__init__()
 
@@ -236,9 +235,6 @@ class CostModel(nn.Module):
             nn.Softplus(),
         )
 
-        self.register_buffer("R", input_penalty * torch.eye(u_dim, dtype=torch.float32))
-
-    def forward(self, x:torch.Tensor, u:torch.Tensor):
-        uRu = torch.einsum("bi,ij,bj->b", u, self.R, u).unsqueeze(1)
-        cost = 0.5 * (self.mlp_layers(x) + uRu)
+    def forward(self, x:torch.Tensor):
+        cost = self.mlp_layers(x)
         return cost
