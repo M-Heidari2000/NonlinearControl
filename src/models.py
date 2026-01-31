@@ -211,3 +211,34 @@ class Encoder(nn.Module):
         rnn_hiddens = torch.stack(rnn_hiddens, dim=0)
 
         return posteriors, rnn_hiddens
+    
+
+class CostModel(nn.Module):
+
+    def __init__(
+        self,
+        x_dim: int,
+        u_dim: int,
+        hidden_dim: Optional[int]=64,
+        input_penalty: Optional[float]=1.0,
+    ):
+        super().__init__()
+
+        self.x_dim = x_dim
+        self.u_dim = u_dim
+
+        self.mlp_layers = nn.Sequential(
+            nn.Linear(self.x_dim, hidden_dim),
+            nn.ReLU(),
+            nn.Linear(hidden_dim, hidden_dim),
+            nn.ReLU(),
+            nn.Linear(hidden_dim, 1),
+            nn.Softplus(),
+        )
+
+        self.register_buffer("R", input_penalty * torch.eye(u_dim, dtype=torch.float32))
+
+    def forward(self, x:torch.Tensor, u:torch.Tensor):
+        uRu = torch.einsum("bi,ij,bj->b", u, self.R, u).unsqueeze(1)
+        cost = 0.5 * (self.mlp_layers(x) + uRu)
+        return cost

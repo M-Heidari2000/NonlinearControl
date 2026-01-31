@@ -12,6 +12,7 @@ from .models import (
     Encoder,
     Decoder,
     Dynamics,
+    CostModel,
 )
 
 
@@ -167,3 +168,111 @@ def train_backbone(
                 })
                 
     return encoder, decoder, dynamics_model
+
+
+def train_cost(
+    config: DictConfig,
+    encoder: Encoder,
+    train_buffer: ReplayBuffer,
+    test_buffer: ReplayBuffer,
+):
+    device = "cuda" if (torch.cuda.is_available() and not config.disable_gpu) else "cpu"
+
+    cost_model = CostModel(
+        x_dim=encoder.x_dim,
+        u_dim=encoder.u_dim,
+        input_penalty=config.input_penalty,
+    ).to(device)
+
+    # freeze the encoder
+    for p in encoder.parameters():
+        p.requires_grad = False
+
+    encoder.eval()
+
+    wandb.watch([cost_model], log="all", log_freq=10)
+    all_params = list(cost_model.parameters())
+    optimizer = torch.optim.Adam(all_params, lr=config.lr, eps=config.eps, weight_decay=config.weight_decay)
+    scheduler = torch.optim.lr_scheduler.CosineAnnealingLR(
+        optimizer=optimizer,
+        T_max=config.num_updates
+    )
+
+    # train and test loop
+    for update in tqdm(range(config.num_updates)):    
+        # train
+        cost_model.train()
+
+        y, u, c, _ = train_buffer.sample(
+            batch_size=config.batch_size,
+            chunk_length=config.chunk_length,
+        )
+
+        # convert to tensor, transform to device, reshape to time-first
+        y = torch.as_tensor(y, device=device)
+        y = torch.cat((
+            torch.zeros((1, config.batch_size, test_buffer.y_dim), device=device),
+            einops.rearrange(y, "b l y -> l b y")
+        ), dim=0)
+        u = torch.as_tensor(u, device=device)
+        u = einops.rearrange(u, "b l u -> l b u")
+
+        # Initial RNN hidden
+        rnn_hidden = torch.zeros((config.batch_size, config.rnn_hidden_dim), device=device)
+        posteriors, _ = encoder(rnn_hidden=rnn_hidden, ys=y, us=u)
+        # x0:T
+        posterior_samples = torch.stack([p.rsample() for p in posteriors], dim=0)
+        # compute cost loss
+        cost_loss = 0.0
+        for t in range(config.chunk_length):
+            cost_loss += nn.MSELoss()(cost_model(x=posterior_samples[t], u=u[t]), c[t])
+        cost_loss = cost_loss / config.chunk_length
+
+        optimizer.zero_grad()
+        cost_loss.backward()
+
+        clip_grad_norm_(all_params, config.clip_grad_norm)
+        optimizer.step()
+        scheduler.step()
+
+        wandb.log({
+            "train/cost loss": cost_loss.item(),
+            "global_step": update,
+        })
+            
+        if update % config.test_interval == 0:
+            # test
+            with torch.no_grad():
+                cost_model.eval()
+
+                y, u, c, _ = test_buffer.sample(
+                    batch_size=config.batch_size,
+                    chunk_length=config.chunk_length,
+                )
+
+                # convert to tensor, transform to device, reshape to time-first
+                y = torch.as_tensor(y, device=device)
+                y = torch.cat((
+                    torch.zeros((1, config.batch_size, test_buffer.y_dim), device=device),
+                    einops.rearrange(y, "b l y -> l b y")
+                ), dim=0)
+                u = torch.as_tensor(u, device=device)
+                u = einops.rearrange(u, "b l u -> l b u")
+
+                # Initial RNN hidden
+                rnn_hidden = torch.zeros((config.batch_size, config.rnn_hidden_dim), device=device)
+                posteriors, _ = encoder(rnn_hidden=rnn_hidden, ys=y, us=u)
+                # x0:T
+                posterior_samples = torch.stack([p.rsample() for p in posteriors], dim=0)
+                # compute cost loss
+                cost_loss = 0.0
+                for t in range(config.chunk_length):
+                    cost_loss += nn.MSELoss()(cost_model(x=posterior_samples[t], u=u[t]), c[t])
+                cost_loss = cost_loss / config.chunk_length
+
+                wandb.log({
+                    "test/cost loss": cost_loss.item(),
+                    "global_step": update,
+                })
+                
+    return cost_model
