@@ -222,7 +222,7 @@ def train_cost(
         ), dim=0)
 
         # Initial RNN hidden
-        rnn_hidden = torch.zeros((config.batch_size, config.rnn_hidden_dim), device=device)
+        rnn_hidden = torch.zeros((config.batch_size, encoder.rnn_hidden_dim), device=device)
         posteriors, _ = encoder(rnn_hidden=rnn_hidden, ys=y, us=u)
         # x0:T
         posterior_samples = torch.stack([p.rsample() for p in posteriors], dim=0)
@@ -269,7 +269,7 @@ def train_cost(
                 ), dim=0)
 
                 # Initial RNN hidden
-                rnn_hidden = torch.zeros((config.batch_size, config.rnn_hidden_dim), device=device)
+                rnn_hidden = torch.zeros((config.batch_size, encoder.rnn_hidden_dim), device=device)
                 posteriors, _ = encoder(rnn_hidden=rnn_hidden, ys=y, us=u)
                 # x0:T
                 posterior_samples = torch.stack([p.rsample() for p in posteriors], dim=0)
