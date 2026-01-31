@@ -57,9 +57,11 @@ train:
     weight_decay: 1e-6
     clip_grad_norm: 1.0
     disable_gpu: True
-    input_penalty: 1e-6
 
 evaluation:
   num_points: 1
   num_regions: 1
   planning_horizon: 8
+  num_iterations: 10
+  num_candidates: 1000
+  num_elites: 100
