@@ -6,6 +6,7 @@ from omegaconf.dictconfig import DictConfig
 from .models import Dynamics, Encoder
 from .utils import make_grid
 from .memory import ReplayBuffer
+from sklearn.preprocessing import StandardScaler
 from .train import train_cost
 
 
@@ -63,6 +64,7 @@ def evaluate(
     env: gym.Env,
     dynamics_model: Dynamics,
     encoder: Encoder,
+    obs_scaler: StandardScaler,
     train_buffer: ReplayBuffer,
     test_buffer: ReplayBuffer,
 ):
@@ -90,6 +92,7 @@ def evaluate(
             agent = CEMAgent(
                 encoder=encoder,
                 dynamics_model=dynamics_model,
+                obs_scaler=obs_scaler,
                 cost_model=cost_model,
                 planning_horizon=eval_config.planning_horizon,
                 num_iterations=eval_config.num_iterations,

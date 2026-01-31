@@ -95,6 +95,7 @@ if __name__ == "__main__":
         env=env,
         dynamics_model=dynamics_model,
         encoder=encoder,
+        obs_scaler=obs_scaler,
         train_buffer=train_buffer,
         test_buffer=test_buffer
     )
