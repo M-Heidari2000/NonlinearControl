@@ -67,15 +67,6 @@ if __name__ == "__main__":
     train_buffer = ReplayBuffer.load_from_minari(dataset=train_data)
     test_buffer = ReplayBuffer.load_from_minari(dataset=test_data)
 
-    # normalize observations
-    obs_scaler = StandardScaler()
-    obs_scaler.fit(train_buffer.ys)
-    train_buffer.ys = obs_scaler.transform(train_buffer.ys)
-    test_buffer.ys = obs_scaler.transform(test_buffer.ys)
-
-    # save scaler
-    joblib.dump(obs_scaler, save_dir / "obs_scaler.bin")
-
     # train and save the backbone
     logging.info("training backbone ...")
     encoder, decoder, dynamics_model = train_backbone(
@@ -95,7 +86,6 @@ if __name__ == "__main__":
         env=env,
         dynamics_model=dynamics_model,
         encoder=encoder,
-        obs_scaler=obs_scaler,
         train_buffer=train_buffer,
         test_buffer=test_buffer
     )

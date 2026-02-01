@@ -17,7 +17,6 @@ class CEMAgent:
         encoder: Encoder,
         dynamics_model: Dynamics,
         cost_model: CostModel,
-        obs_scaler: StandardScaler,
         planning_horizon: int,
         num_iterations: int = 10,
         num_candidates: int = 100,
@@ -32,7 +31,6 @@ class CEMAgent:
         self.num_elites = num_elites
         self.planning_horizon = planning_horizon
         self.action_noise = action_noise
-        self.obs_scaler = obs_scaler
 
         self.device = next(encoder.parameters()).device
 
@@ -47,8 +45,7 @@ class CEMAgent:
         """
 
         # convert y_t & u_t to a torch tensor and add a batch dimension
-        y = self.obs_scaler.transform(y.reshape(1, -1))
-        y = torch.as_tensor(y, device=self.device)
+        y = torch.as_tensor(y, device=self.device).unsqueeze(0)
         u = torch.as_tensor(u, device=self.device).unsqueeze(0)
 
         # no learning takes place here

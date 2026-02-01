@@ -64,7 +64,6 @@ def evaluate(
     env: gym.Env,
     dynamics_model: Dynamics,
     encoder: Encoder,
-    obs_scaler: StandardScaler,
     train_buffer: ReplayBuffer,
     test_buffer: ReplayBuffer,
 ):
@@ -92,7 +91,6 @@ def evaluate(
             agent = CEMAgent(
                 encoder=encoder,
                 dynamics_model=dynamics_model,
-                obs_scaler=obs_scaler,
                 cost_model=cost_model,
                 planning_horizon=eval_config.planning_horizon,
                 num_iterations=eval_config.num_iterations,
